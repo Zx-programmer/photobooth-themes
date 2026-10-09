@@ -2,1211 +2,571 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pinkie Booth — Your Little Cute World ♡</title>
-
-  <!-- Google Fonts: Gaegu (cute handwritten), Plus Jakarta Sans (clean text), Mali -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Mali:ital,wght@0,500;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- Tailwind CSS CDN -->
+  
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            babypink: '#ffe4e6',
-            pastelpink: '#fecdd3',
-            rosered: '#f43f5e',
-            cream: '#fff1f2',
-            burgundy: '#881337',
-            deepburgundy: '#4c0519',
-          },
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            cute: ['"Gaegu"', 'cursive'],
-            handwritten: ['"Mali"', 'cursive'],
-          },
-          animation: {
-            'float': 'float 4s ease-in-out infinite',
-            'sparkle': 'sparkle 2s ease-in-out infinite',
-            'pulse-soft': 'pulseSoft 3s ease-in-out infinite',
-            'pop-in': 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-          },
-          keyframes: {
-            float: {
-              '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
-              '50%': { transform: 'translateY(-10px) rotate(3deg)' },
-            },
-            sparkle: {
-              '0%, 100%': { opacity: 0.4, transform: 'scale(0.9)' },
-              '50%': { opacity: 1, transform: 'scale(1.15)' },
-            },
-            pulseSoft: {
-              '0%, 100%': { opacity: 1, transform: 'scale(1)' },
-              '50%': { opacity: 0.92, transform: 'scale(1.02)' },
-            },
-            popIn: {
-              '0%': { opacity: 0, transform: 'scale(0.8)' },
-              '100%': { opacity: 1, transform: 'scale(1)' },
-            }
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- React & ReactDOM UMD CDNs -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-
-  <!-- Babel Standalone for JSX transformation -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- Lucide Icons Global script -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Sacramento&display=swap" rel="stylesheet">
+  
+  <!-- Fabric.js (Canvas Editor & Drag/Drop) & jsPDF (Ekspor PDF) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    /* Custom CSS animations and scrollbar aesthetics */
-    body {
-      background-color: #fff1f2;
-      background-image: radial-gradient(#fecdd3 1px, transparent 1px);
-      background-size: 20px 20px;
-    }
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #ffe4e6;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #f43f5e;
-      border-radius: 9999px;
-    }
-    .ribbon-banner {
-      background: linear-gradient(135deg, #f43f5e, #be185d);
-    }
-    .canvas-container {
-      touch-action: none;
-    }
+    /* --- style.css --- */
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #fdf2f8; }
+    .font-cute { font-family: 'Sacramento', cursive; }
+    
+    .step-container { display: none; animation: fadeIn 0.5s ease-in-out; }
+    .step-active { display: block; }
+    
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pingSlow { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 0; } 100% { transform: scale(1); opacity: 0; } }
+    
+    .flash-overlay { position: absolute; inset: 0; background: white; z-index: 50; animation: flashAnim 0.3s ease-out; pointer-events: none; }
+    @keyframes flashAnim { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+    /* Canvas Wrapper */
+    .canvas-container { margin: 0 auto; box-shadow: 0 10px 25px rgba(244, 63, 94, 0.2); border-radius: 12px; overflow: hidden; }
   </style>
 </head>
-<body class="text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-rose-200 selection:text-rose-900">
-
-  <!-- Root React App Container -->
-  <div id="root"></div>
-
-  <script type="text/babel">
-    const { useState, useEffect, useRef, useCallback } = React;
-
-    // ==========================================
-    // 1. CONSTANTS, PRESETS & COLLECTIONS
-    // ==========================================
-    const THEMES = [
-      { id: 'pink-coquette', name: 'Pink Coquette 🎀', bg: '#ffe4e6', frame: '#ffffff', border: '#f43f5e', text: '#9f1239', pattern: 'hearts' },
-      { id: 'strawberry-milk', name: 'Strawberry Milk 🍓', bg: '#fff1f2', frame: '#fecdd3', border: '#fb7185', text: '#e11d48', pattern: 'polka' },
-      { id: 'dreamy-garden', name: 'Dreamy Garden 🌷', bg: '#f0fdf4', frame: '#ffffff', border: '#86efac', text: '#166534', pattern: 'sparkles' },
-      { id: 'korean-booth', name: 'Cute Korean Booth 🩷', bg: '#fdf2f8', frame: '#fbcfe8', border: '#f472b6', text: '#be185d', pattern: 'none' },
-      { id: 'burgundy-luxury', name: 'Burgundy Luxury 🍒', bg: '#4c0519', frame: '#881337', border: '#f43f5e', text: '#ffe4e6', pattern: 'stars' },
-      { id: 'pastel-kawaii', name: 'Pastel Kawaii 🧸', bg: '#fefce8', frame: '#ffffff', border: '#fde047', text: '#854d0e', pattern: 'polka' },
-      { id: 'love-letter', name: 'Love Letter 💌', bg: '#faf5ff', frame: '#f3e8ff', border: '#c084fc', text: '#6b21a8', pattern: 'hearts' },
-      { id: 'scrapbook-diary', name: 'Scrapbook Diary 📔', bg: '#fffbe8', frame: '#fef08a', border: '#ca8a04', text: '#713f12', pattern: 'stripes' },
-      { id: 'ice-cream-party', name: 'Ice Cream Party 🍦', bg: '#ecfeff', frame: '#cffafe', border: '#22d3ee', text: '#155e75', pattern: 'sparkles' },
-      { id: 'minimalist-film', name: 'Minimalist Film 🎞️', bg: '#18181b', frame: '#27272a', border: '#52525b', text: '#f4f4f5', pattern: 'none' }
-    ];
-
-    const PERSONAL_ITEMS = [
-      { id: 'gelang', name: 'Gelang Manik-Manik', emoji: '📿', note: 'Aksoris imut & warna-warni favorit', category: 'Fashion' },
-      { id: 'tas', name: 'Tas Mini', emoji: '👜', note: 'Pelengkap outfit cantik sehari-hari', category: 'Fashion' },
-      { id: 'flatshoes', name: 'Flatshoes Lucu', emoji: '🥿', note: 'Nyaman dipakai jalan-jalan', category: 'Fashion' },
-      { id: 'keychain', name: 'Keychain Karakter', emoji: '🔑', note: 'Gantungan kunci lucu gemas', category: 'Hobby' },
-      { id: 'boneka', name: 'Boneka Plushie', emoji: '🧸', note: 'Teman tidur ter-soft & empuk', category: 'Hobby' },
-      { id: 'bunga', name: 'Bunga Fresh', emoji: '🌷', note: 'Selalu sukses bikin mood happy', category: 'Nature' },
-      { id: 'parfum', name: 'Scarlett Velvet Rouge', emoji: '🧴', note: 'WANGI BGT SUKAK ♡', category: 'Beauty' },
-      { id: 'iphone', name: 'iPhone Burgundy', emoji: '📱', note: 'Warna burgundy paling estetis', category: 'Tech' },
-      { id: 'lambo', name: 'Lamborghini', emoji: '🏎️', note: 'Dream car mewah sepanjang masa', category: 'Dream' },
-      { id: 'pashmina', name: 'Pashmina Ceruty', emoji: '🧣', note: 'Bahan halus & mudah dibentuk', category: 'Fashion' },
-      { id: 'pink', name: 'Semua Warna Pink', emoji: '🩷', note: 'Warna kebahagiaan nomor satu', category: 'Aesthetic' },
-      { id: 'cute-things', name: 'Barang-Barang Imut', emoji: '🎀', note: 'Pita, glitter, & barang kecil', category: 'Aesthetic' },
-      { id: 'dimsum', name: 'Dimsum Hangat', emoji: '🥟', note: 'kekasih gua 🥺🫰🏻', category: 'Food' },
-      { id: 'teaching', name: 'Mengajari Orang Lain', emoji: '👩‍🏫', note: 'Berbagi ilmu itu menyenangkan', category: 'Life' },
-      { id: 'tulus', name: 'Penyanyi Tulus', emoji: '🎙️', note: 'penyanyi kesukaan gua bgt 🤤🤤', category: 'Music' },
-      { id: 'sleep', name: 'Tidur Nyenyak', emoji: '😴', note: 'Recharge energi paling ampuh', category: 'Life' },
-      { id: 'study', name: 'Belajar Hal Baru', emoji: '📚', note: 'Selalu penasaran & ambisius', category: 'Life' },
-      { id: 'flowers-again', name: 'Buket Bunga', emoji: '🌸', note: 'Hadiah manis yang tak pernah gagal', category: 'Nature' },
-      { id: 'novel', name: 'Membaca Buku Novel', emoji: '📖', note: 'Masuk ke dunia fiksi & fantasi', category: 'Hobby' },
-      { id: 'icecream', name: 'Ice Cream Manis', emoji: '🍦', note: 'Penyegar mood saat santai', category: 'Food' }
-    ];
-
-    const SVG_STICKERS = [
-      { id: 'ribbon', label: 'Pita Pink', svg: `<svg viewBox="0 0 100 100"><path d="M50 45 C30 20 10 35 30 55 C40 65 50 50 50 50 C50 50 60 65 70 55 C90 35 70 20 50 45 Z" fill="#fb7185"/><circle cx="50" cy="48" r="6" fill="#be185d"/><path d="M45 52 L25 85 L38 80 L50 58 L62 80 L75 85 L55 52 Z" fill="#f43f5e"/></svg>` },
-      { id: 'heart', label: 'Hati Sparkle', svg: `<svg viewBox="0 0 100 100"><path d="M50 30 C40 10 10 20 10 45 C10 65 50 90 50 90 C50 90 90 65 90 45 C90 20 60 10 50 30 Z" fill="#f43f5e"/><path d="M25 30 Q30 20 40 25" stroke="#ffffff" stroke-width="4" stroke-linecap="round" fill="none"/></svg>` },
-      { id: 'tulip', label: 'Bunga Tulip', svg: `<svg viewBox="0 0 100 100"><path d="M50 90 L50 50" stroke="#4ade80" stroke-width="6"/><path d="M50 70 Q30 65 20 75 Q35 85 50 75" fill="#22c55e"/><path d="M30 45 C20 20 40 10 50 30 C60 10 80 20 70 45 C65 55 35 55 30 45 Z" fill="#fb7185"/></svg>` },
-      { id: 'sparkle', label: 'Bintang Emas', svg: `<svg viewBox="0 0 100 100"><path d="M50 10 Q50 50 10 50 Q50 50 50 90 Q50 50 90 50 Q50 50 50 10 Z" fill="#facc15"/></svg>` },
-      { id: 'cherry', label: 'Cherry', svg: `<svg viewBox="0 0 100 100"><path d="M35 50 Q50 20 70 25" stroke="#15803d" stroke-width="4" fill="none"/><circle cx="30" cy="65" r="18" fill="#881337"/><circle cx="65" cy="70" r="18" fill="#9f1239"/><circle cx="24" cy="58" r="4" fill="#ffffff"/><circle cx="59" cy="63" r="4" fill="#ffffff"/></svg>` },
-      { id: 'badge', label: 'Badge Love', svg: `<svg viewBox="0 0 160 50"><rect x="5" y="5" width="150" height="40" rx="20" fill="#ffe4e6" stroke="#fb7185" stroke-width="2"/><text x="80" y="30" font-family="sans-serif" font-size="14" font-weight="bold" fill="#e11d48" text-anchor="middle">made with love ♡</text></svg>` }
-    ];
-
-    // ==========================================
-    // 2. MAIN APPLICATION COMPONENT
-    // ==========================================
-    function PinkieBoothApp() {
-      // Navigation
-      const [activeTab, setActiveTab] = useState('landing'); // landing, studio, editor, collection, gallery
-
-      // Camera & Capture State
-      const [stream, setStream] = useState(null);
-      const [cameraActive, setCameraActive] = useState(false);
-      const [cameraError, setCameraError] = useState('');
-      const [facingMode, setFacingMode] = useState('user');
-      const [capturedPhotos, setCapturedPhotos] = useState([]);
-      const [layout, setLayout] = useState('4-strip'); // 1-pic, 2-strip, 3-strip, 4-strip, 4-grid
-      const [countdown, setCountdown] = useState(5);
-      const [countdownTimer, setCountdownTimer] = useState(null);
-      const [isCapturing, setIsCapturing] = useState(false);
-      const [capturedCount, setCapturedCount] = useState(0);
-      const [soundEnabled, setSoundEnabled] = useState(true);
-      const [mirrorCamera, setMirrorCamera] = useState(true);
-      const [flashEffect, setFlashEffect] = useState(false);
-      const [activeFilter, setActiveFilter] = useState('soft-pink');
-
-      // Customization & Canvas Editor State
-      const [selectedTheme, setSelectedTheme] = useState(THEMES[0]);
-      const [customBgColor, setCustomBgColor] = useState('#ffe4e6');
-      const [customBorderColor, setCustomBorderColor] = useState('#f43f5e');
-      const [customFrameColor, setCustomFrameColor] = useState('#ffffff');
-      const [borderWidth, setBorderWidth] = useState(12);
-
-      // Canvas Interactive Elements (Stickers & Texts)
-      const [stickersOnCanvas, setStickersOnCanvas] = useState([]);
-      const [selectedStickerId, setSelectedStickerId] = useState(null);
-      const [customTexts, setCustomTexts] = useState([
-        { id: 'default-title', text: 'Pinkie Booth ♡', x: 200, y: 35, color: '#e11d48', fontSize: 22 }
-      ]);
-      const [newText, setNewText] = useState('');
-
-      // Saved Gallery
-      const [savedGallery, setSavedGallery] = useState(() => {
-        try {
-          const stored = localStorage.getItem('pinkie_booth_gallery');
-          return stored ? JSON.parse(stored) : [];
-        } catch(e) { return []; }
-      });
-
-      // Toast Notification
-      const [toastMessage, setToastMessage] = useState('');
-
-      // Refs
-      const videoRef = useRef(null);
-      const compositedCanvasRef = useRef(null);
-      const fileInputRef = useRef(null);
-      const customStickerInputRef = useRef(null);
-
-      // Toast Handler
-      const showToast = (msg) => {
-        setToastMessage(msg);
-        setTimeout(() => setToastMessage(''), 3000);
-      };
-
-      // Web Audio API Synth Shutter Sound
-      const playShutterSound = () => {
-        if (!soundEnabled) return;
-        try {
-          const ctx = new (window.AudioContext || window.webkitAudioContext)();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(800, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.15);
-          gain.gain.setValueAtTime(0.3, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.15);
-        } catch (e) {
-          console.log('Audio Context Sound Error:', e);
-        }
-      };
-
-      // Camera Control Logic
-      const startCamera = async () => {
-        setCameraError('');
-        try {
-          if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-          }
-          const newStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-          });
-          setStream(newStream);
-          if (videoRef.current) {
-            videoRef.current.srcObject = newStream;
-          }
-          setCameraActive(true);
-        } catch (err) {
-          setCameraError('Kamera tidak dapat diakses atau izin ditolak. Kamu tetap bisa mengunggah foto dari galeri!');
-          setCameraActive(false);
-        }
-      };
-
-      const stopCamera = () => {
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          setStream(null);
-        }
-        setCameraActive(false);
-      };
-
-      useEffect(() => {
-        if (activeTab === 'studio') {
-          startCamera();
-        } else {
-          stopCamera();
-        }
-        return () => stopCamera();
-      }, [activeTab, facingMode]);
-
-      // Re-initialize Lucide Icons on DOM updates
-      useEffect(() => {
-        if (window.lucide) {
-          window.lucide.createIcons();
-        }
-      });
-
-      // Photo Capture Logic
-      const getRequiredPhotosCount = () => {
-        switch (layout) {
-          case '1-pic': return 1;
-          case '2-strip': return 2;
-          case '3-strip': return 3;
-          case '4-strip': return 4;
-          case '4-grid': return 4;
-          default: return 4;
-        }
-      };
-
-      const startPhotoSession = () => {
-        setCapturedPhotos([]);
-        setIsCapturing(true);
-        setCapturedCount(0);
-        captureNextPhoto(0, getRequiredPhotosCount());
-      };
-
-      const captureNextPhoto = (currentStep, totalSteps) => {
-        let timer = countdown;
-        setCountdownTimer(timer);
-
-        const interval = setInterval(() => {
-          timer -= 1;
-          setCountdownTimer(timer);
-
-          if (timer <= 0) {
-            clearInterval(interval);
-            setCountdownTimer(null);
-
-            // Flash & Sound
-            setFlashEffect(true);
-            playShutterSound();
-            setTimeout(() => setFlashEffect(false), 200);
-
-            // Snap photo from Video element
-            if (videoRef.current) {
-              const video = videoRef.current;
-              const tempCanvas = document.createElement('canvas');
-              tempCanvas.width = video.videoWidth || 640;
-              tempCanvas.height = video.videoHeight || 480;
-              const ctx = tempCanvas.getContext('2d');
-
-              if (mirrorCamera && facingMode === 'user') {
-                ctx.translate(tempCanvas.width, 0);
-                ctx.scale(-1, 1);
-              }
-              ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-              const dataUrl = tempCanvas.toDataURL('image/png');
-
-              setCapturedPhotos(prev => {
-                const updated = [...prev, dataUrl];
-                if (updated.length < totalSteps) {
-                  setCapturedCount(updated.length);
-                  setTimeout(() => captureNextPhoto(updated.length, totalSteps), 1200);
-                } else {
-                  setIsCapturing(false);
-                  showToast('Sesi foto selesai! Hias foto cantikmu ♡');
-                  setActiveTab('editor');
-                }
-                return updated;
-              });
-            }
-          }
-        }, 1000);
-      };
-
-      // File Upload Fallback
-      const handleFileUpload = (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length > 0) {
-          const newPhotos = [];
-          files.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              newPhotos.push(event.target.result);
-              if (newPhotos.length === files.length) {
-                setCapturedPhotos(prev => [...prev, ...newPhotos].slice(0, getRequiredPhotosCount()));
-                setActiveTab('editor');
-                showToast('Foto berhasil diunggah!');
-              }
-            };
-            reader.readAsDataURL(file);
-          });
-        }
-      };
-
-      // Upload Custom PNG Sticker
-      const handleCustomStickerUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const imgData = event.target.result;
-            const newSticker = {
-              id: 'custom-' + Date.now(),
-              type: 'image',
-              src: imgData,
-              x: 200,
-              y: 200,
-              scale: 0.8,
-              rotation: 0
-            };
-            setStickersOnCanvas(prev => [...prev, newSticker]);
-            showToast('Stiker kustom berhasil ditambahkan!');
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-
-      // Add Sticker to Canvas Logic
-      const addSvgStickerToCanvas = (svgContent) => {
-        const newSticker = {
-          id: 'sticker-' + Date.now(),
-          type: 'svg',
-          svg: svgContent,
-          x: 150 + Math.floor(Math.random() * 100),
-          y: 200 + Math.floor(Math.random() * 100),
-          scale: 1,
-          rotation: Math.floor(Math.random() * 30) - 15
-        };
-        setStickersOnCanvas(prev => [...prev, newSticker]);
-        showToast('Stiker ditambahkan ke canvas! 🎀');
-      };
-
-      const addEmojiStickerToCanvas = (emoji, label) => {
-        const newSticker = {
-          id: 'emoji-' + Date.now(),
-          type: 'emoji',
-          emoji: emoji,
-          x: 160 + Math.floor(Math.random() * 80),
-          y: 220 + Math.floor(Math.random() * 80),
-          scale: 1.2,
-          rotation: Math.floor(Math.random() * 20) - 10
-        };
-        setStickersOnCanvas(prev => [...prev, newSticker]);
-        showToast(`Stiker ${label || emoji} berhasil ditambahkan! ✨`);
-      };
-
-      // Add Custom Text
-      const handleAddText = () => {
-        if (!newText.trim()) return;
-        setCustomTexts(prev => [
-          ...prev,
-          { id: 'txt-' + Date.now(), text: newText, x: 200, y: 550, color: selectedTheme.text, fontSize: 18 }
-        ]);
-        setNewText('');
-        showToast('Teks berhasil ditambahkan!');
-      };
-
-      // CANVAS COMPOSITING RENDER ENGINE
-      useEffect(() => {
-        if (activeTab !== 'editor' || !compositedCanvasRef.current) return;
-
-        const canvas = compositedCanvasRef.current;
-        const ctx = canvas.getContext('2d');
-
-        const width = 400;
-        let height = 600;
-
-        if (layout === '4-strip') height = 960;
-        if (layout === '3-strip') height = 760;
-        if (layout === '2-strip') height = 540;
-        if (layout === '1-pic') height = 460;
-        if (layout === '4-grid') height = 520;
-
-        canvas.width = width;
-        canvas.height = height;
-
-        // 1. Draw Background
-        ctx.fillStyle = customBgColor;
-        ctx.fillRect(0, 0, width, height);
-
-        // 2. Draw Theme Patterns
-        if (selectedTheme.pattern === 'polka') {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-          for (let x = 12; x < width; x += 28) {
-            for (let y = 12; y < height; y += 28) {
-              ctx.beginPath();
-              ctx.arc(x, y, 3.5, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-        } else if (selectedTheme.pattern === 'hearts') {
-          ctx.fillStyle = 'rgba(244, 63, 94, 0.15)';
-          ctx.font = '14px font-cute';
-          for (let x = 15; x < width; x += 45) {
-            for (let y = 20; y < height; y += 45) {
-              ctx.fillText('♥', x, y);
-            }
-          }
-        }
-
-        // 3. Draw Outer Border
-        ctx.strokeStyle = customBorderColor;
-        ctx.lineWidth = borderWidth;
-        ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
-
-        // 4. Calculate Photo Slot Geometry
-        const photoSlots = [];
-        const p = 14 + borderWidth;
-        const availW = width - (p * 2);
-        const availH = height - (p * 2) - 60; // Extra room for header title
-
-        if (layout === '4-strip') {
-          const hEach = (availH - (p * 3)) / 4;
-          for (let i = 0; i < 4; i++) {
-            photoSlots.push({ x: p, y: p + 35 + i * (hEach + p), w: availW, h: hEach });
-          }
-        } else if (layout === '3-strip') {
-          const hEach = (availH - (p * 2)) / 3;
-          for (let i = 0; i < 3; i++) {
-            photoSlots.push({ x: p, y: p + 35 + i * (hEach + p), w: availW, h: hEach });
-          }
-        } else if (layout === '2-strip') {
-          const hEach = (availH - p) / 2;
-          for (let i = 0; i < 2; i++) {
-            photoSlots.push({ x: p, y: p + 35 + i * (hEach + p), w: availW, h: hEach });
-          }
-        } else if (layout === '1-pic') {
-          photoSlots.push({ x: p, y: p + 35, w: availW, h: availH });
-        } else if (layout === '4-grid') {
-          const wEach = (availW - p) / 2;
-          const hEach = (availH - p) / 2;
-          photoSlots.push(
-            { x: p, y: p + 35, w: wEach, h: hEach },
-            { x: p + wEach + p, y: p + 35, w: wEach, h: hEach },
-            { x: p, y: p + 35 + hEach + p, w: wEach, h: hEach },
-            { x: p + wEach + p, y: p + 35 + hEach + p, w: wEach, h: hEach }
-          );
-        }
-
-        // 5. Draw Photo Slots and Filtered Images
-        photoSlots.forEach((slot, idx) => {
-          ctx.fillStyle = customFrameColor;
-          ctx.fillRect(slot.x, slot.y, slot.w, slot.h);
-
-          if (capturedPhotos[idx]) {
-            const img = new Image();
-            img.src = capturedPhotos[idx];
-            img.onload = () => {
-              ctx.save();
-              ctx.beginPath();
-              ctx.rect(slot.x, slot.y, slot.w, slot.h);
-              ctx.clip();
-
-              // Photo Filter application
-              if (activeFilter === 'soft-pink') ctx.filter = 'sepia(0.25) hue-rotate(310deg) saturate(1.3) brightness(1.05)';
-              if (activeFilter === 'vintage-warm') ctx.filter = 'sepia(0.45) contrast(1.1) saturate(1.2)';
-              if (activeFilter === 'dreamy-glow') ctx.filter = 'brightness(1.15) contrast(0.95) saturate(1.4)';
-              if (activeFilter === 'bw-chic') ctx.filter = 'grayscale(1) contrast(1.25)';
-              if (activeFilter === 'y2k-sepia') ctx.filter = 'sepia(0.85) contrast(1.3) brightness(0.95)';
-
-              // Crop & Scale Cover Fit
-              const imgRatio = img.width / img.height;
-              const slotRatio = slot.w / slot.h;
-              let renderW = slot.w;
-              let renderH = slot.h;
-              let offsetX = slot.x;
-              let offsetY = slot.y;
-
-              if (imgRatio > slotRatio) {
-                renderW = slot.h * imgRatio;
-                offsetX = slot.x - (renderW - slot.w) / 2;
-              } else {
-                renderH = slot.w / imgRatio;
-                offsetY = slot.y - (renderH - slot.h) / 2;
-              }
-
-              ctx.drawImage(img, offsetX, offsetY, renderW, renderH);
-              ctx.restore();
-            };
-          } else {
-            // Empty Slot placeholder
-            ctx.fillStyle = '#fce7f3';
-            ctx.fillRect(slot.x, slot.y, slot.w, slot.h);
-            ctx.fillStyle = '#f43f5e';
-            ctx.font = '14px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Foto ${idx + 1}`, slot.x + slot.w / 2, slot.y + slot.h / 2);
-          }
-        });
-
-        // 6. Draw Custom Texts
-        customTexts.forEach(txt => {
-          ctx.fillStyle = txt.color;
-          ctx.font = `bold ${txt.fontSize}px sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.fillText(txt.text, txt.x, txt.y);
-        });
-
-        // 7. Draw Canvas Stickers
-        stickersOnCanvas.forEach(st => {
-          if (st.type === 'emoji') {
-            ctx.save();
-            ctx.translate(st.x, st.y);
-            ctx.rotate((st.rotation * Math.PI) / 180);
-            ctx.font = `${Math.round(36 * st.scale)}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(st.emoji, 0, 0);
-            ctx.restore();
-          } else if (st.type === 'svg') {
-            const img = new Image();
-            const svgBlob = new Blob([st.svg], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(svgBlob);
-            img.src = url;
-            img.onload = () => {
-              ctx.save();
-              ctx.translate(st.x, st.y);
-              ctx.rotate((st.rotation * Math.PI) / 180);
-              ctx.scale(st.scale, st.scale);
-              ctx.drawImage(img, -25, -25, 50, 50);
-              ctx.restore();
-              URL.revokeObjectURL(url);
-            };
-          } else if (st.type === 'image') {
-            const img = new Image();
-            img.src = st.src;
-            img.onload = () => {
-              ctx.save();
-              ctx.translate(st.x, st.y);
-              ctx.rotate((st.rotation * Math.PI) / 180);
-              ctx.scale(st.scale, st.scale);
-              ctx.drawImage(img, -40, -40, 80, 80);
-              ctx.restore();
-            };
-          }
-        });
-
-      }, [
-        activeTab, capturedPhotos, layout, customBgColor, customBorderColor, 
-        customFrameColor, borderWidth, selectedTheme, activeFilter, 
-        stickersOnCanvas, customTexts
-      ]);
-
-      // Download Composite High-Res Image
-      const downloadCompositeImage = () => {
-        if (!compositedCanvasRef.current) return;
-        const canvas = compositedCanvasRef.current;
-        const imageURI = canvas.toDataURL('image/png');
-
-        const link = document.createElement('a');
-        link.download = `pinkie-booth-${Date.now()}.png`;
-        link.href = imageURI;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Update local gallery state & localStorage
-        const newGallery = [{ id: Date.now(), dataUrl: imageURI, date: new Date().toLocaleDateString() }, ...savedGallery];
-        setSavedGallery(newGallery);
-        try {
-          localStorage.setItem('pinkie_booth_gallery', JSON.stringify(newGallery.slice(0, 10)));
-        } catch(e) {}
-
-        showToast('Foto cantikmu berhasil diunduh! 📸♡');
-      };
-
-      return (
-        <div className="flex-1 flex flex-col min-h-screen">
-          
-          {/* Toast Notification Floating Banner */}
-          {toastMessage && (
-            <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-rose-500 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-bounce">
-              <i data-lucide="sparkles" className="w-5 h-5"></i>
-              <span className="font-bold text-xs sm:text-sm">{toastMessage}</span>
-            </div>
-          )}
-
-          {/* Top Navigation Bar */}
-          <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-pink-200 px-4 py-3">
-            <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
-              <div 
-                onClick={() => setActiveTab('landing')}
-                className="flex items-center gap-2 cursor-pointer group"
-              >
-                <div className="w-10 h-10 rounded-2xl bg-rose-500 flex items-center justify-center text-white shadow-md shadow-rose-200 group-hover:scale-105 transition">
-                  🎀
-                </div>
-                <div>
-                  <h1 className="font-bold text-lg text-rose-600 leading-tight">Pinkie Booth</h1>
-                  <p className="text-[10px] text-pink-400 font-medium">Your Little Cute World ♡</p>
-                </div>
-              </div>
-
-              <nav className="flex items-center gap-1 sm:gap-2">
-                {[
-                  { id: 'landing', label: 'Beranda' },
-                  { id: 'studio', label: 'Kamera 📸' },
-                  { id: 'editor', label: 'Editor 🎨' },
-                  { id: 'collection', label: 'Cute Things ♡' },
-                  { id: 'gallery', label: 'Galeri ✨' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${activeTab === tab.id ? 'bg-rose-500 text-white shadow-md' : 'text-slate-600 hover:bg-pink-100'}`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
-          </header>
-
-          {/* ========================================== */}
-          {/* TAB 1: LANDING PAGE                        */}
-          {/* ========================================== */}
-          {}
-          {activeTab === 'landing' && (
-            <main className="flex-1 max-w-5xl mx-auto px-4 py-10 flex flex-col items-center text-center">
-              <div className="inline-flex items-center gap-2 bg-pink-100 border border-pink-200 text-rose-600 px-4 py-1.5 rounded-full text-xs font-bold mb-6 animate-pulse">
-                <i data-lucide="heart" className="w-3.5 h-3.5 fill-rose-500"></i>
-                <span>Digital Gift & Virtual Photobooth Studio</span>
-              </div>
-
-              <h1 className="text-4xl sm:text-6xl font-black text-slate-800 leading-tight mb-4 max-w-3xl">
-                A Little Booth, <br />
-                <span className="text-rose-500">A Lot of Memories ♡</span>
-              </h1>
-
-              <p className="text-slate-600 text-sm sm:text-base max-w-xl mb-8 leading-relaxed">
-                Take a picture, decorate your world, and keep your little memories with ribbons, flowers, dimsum, and dreamy coquette themes!
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 mb-14">
-                <button
-                  onClick={() => setActiveTab('studio')}
-                  className="bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-bold px-8 py-4 rounded-2xl shadow-lg shadow-rose-300 hover:scale-105 transition flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <i data-lucide="camera" className="w-5 h-5"></i>
-                  LET'S TAKE A PIC! 📸
-                </button>
-                <button
-                  onClick={() => setActiveTab('editor')}
-                  className="bg-white hover:bg-pink-50 text-rose-600 border-2 border-rose-200 font-bold px-8 py-4 rounded-2xl hover:scale-105 transition flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <i data-lucide="palette" className="w-5 h-5"></i>
-                  Customize My Booth
-                </button>
-              </div>
-
-              {/* Theme Showcase */}
-              <div className="w-full">
-                <h2 className="text-lg font-bold text-slate-700 mb-6 flex items-center justify-center gap-2">
-                  <i data-lucide="sparkles" className="w-5 h-5 text-rose-400"></i> Pilih Tema Favoritmu
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {THEMES.map(theme => (
-                    <div
-                      key={theme.id}
-                      onClick={() => {
-                        setSelectedTheme(theme);
-                        setCustomBgColor(theme.bg);
-                        setCustomBorderColor(theme.border);
-                        setCustomFrameColor(theme.frame);
-                        setActiveTab('studio');
-                      }}
-                      className="p-4 rounded-2xl border border-pink-200 bg-white hover:shadow-md hover:scale-105 cursor-pointer transition flex flex-col items-center text-center group"
-                    >
-                      <div 
-                        className="w-12 h-16 rounded-lg mb-2 shadow-inner border border-black/10 flex items-center justify-center text-xs group-hover:scale-110 transition"
-                        style={{ backgroundColor: theme.bg }}
-                      >
-                        <div className="w-8 h-10 rounded bg-white/80 shadow-xs" />
-                      </div>
-                      <span className="text-xs font-bold text-slate-700">{theme.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </main>
-          )}
-
-          {/* ========================================== */}
-          {/* TAB 2: CAMERA STUDIO                       */}
-          {/* ========================================== */}
-          {}
-          {activeTab === 'studio' && (
-            <main className="flex-1 max-w-5xl mx-auto px-4 py-8">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Left Controls Panel */}
-                <div className="bg-white p-5 rounded-3xl border border-pink-200 shadow-xs space-y-5">
-                  <h3 className="font-bold text-slate-800 text-sm border-b pb-2 flex items-center gap-2">
-                    <i data-lucide="settings" className="w-4 h-4 text-rose-500"></i> 1. Pengaturan Kamera & Layout
-                  </h3>
-
-                  {/* Layout Selector */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-600 mb-2 block">Layout Photo</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: '1-pic', label: '1 Foto' },
-                        { id: '2-strip', label: '2 Strip' },
-                        { id: '3-strip', label: '3 Strip' },
-                        { id: '4-strip', label: '4 Korea' },
-                        { id: '4-grid', label: '4 Grid' }
-                      ].map(l => (
-                        <button
-                          key={l.id}
-                          onClick={() => setLayout(l.id)}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold border transition ${layout === l.id ? 'bg-rose-50 border-rose-400 text-rose-600 shadow-xs' : 'border-slate-200 text-slate-600'}`}
-                        >
-                          {l.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Countdown Selector */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-600 mb-2 block">Countdown Timer</label>
-                    <div className="flex gap-2">
-                      {[3, 5, 10, 15].map(t => (
-                        <button
-                          key={t}
-                          onClick={() => setCountdown(t)}
-                          className={`flex-1 py-1.5 rounded-xl text-xs font-bold border ${countdown === t ? 'bg-rose-500 text-white border-rose-500 shadow-xs' : 'border-slate-200 text-slate-600'}`}
-                        >
-                          {t}s
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Photo Filter Effect */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-600 mb-2 block">Filter Efek Foto</label>
-                    <select
-                      value={activeFilter}
-                      onChange={(e) => setActiveFilter(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 bg-pink-50/50 text-slate-700 outline-none font-medium"
-                    >
-                      <option value="none font-medium">Normal Clean</option>
-                      <option value="soft-pink">Soft Pink Dreamy 🩷</option>
-                      <option value="vintage-warm">Vintage Warm ☕</option>
-                      <option value="dreamy-glow">Dreamy Glow ✨</option>
-                      <option value="bw-chic">B&W Chic 🎬</option>
-                      <option value="y2k-sepia">Y2K Retro Sepia 🎞️</option>
-                    </select>
-                  </div>
-
-                  {/* Camera Toggles */}
-                  <div className="pt-2 border-t flex items-center justify-between text-xs">
-                    <button
-                      onClick={() => setSoundEnabled(!soundEnabled)}
-                      className="flex items-center gap-1.5 text-slate-600 font-medium hover:text-rose-500"
-                    >
-                      <i data-lucide={soundEnabled ? "volume-2" : "volume-x"} className="w-4 h-4 text-rose-500"></i>
-                      <span>Suara Shutter</span>
-                    </button>
-                    <button
-                      onClick={() => setMirrorCamera(!mirrorCamera)}
-                      className="flex items-center gap-1.5 text-slate-600 font-medium hover:text-rose-500"
-                    >
-                      <i data-lucide="refresh-cw" className="w-4 h-4"></i>
-                      <span>Mirror: {mirrorCamera ? 'ON' : 'OFF'}</span>
-                    </button>
-                  </div>
-
-                  {/* Switch Front/Back Camera */}
-                  <button
-                    onClick={() => setFacingMode(prev => prev === 'user' ? 'environment' : 'user')}
-                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs text-slate-700 font-bold transition"
-                  >
-                    Ganti Kamera (Depan / Belakang)
-                  </button>
-
-                  {/* Gallery Upload Fallback */}
-                  <div className="pt-2 border-t text-center">
-                    <span className="text-[11px] text-slate-400 block mb-2 font-medium">Kamera bermasalah? Upload dari perangkat:</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-2.5 bg-pink-100 hover:bg-pink-200 text-rose-600 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
-                    >
-                      <i data-lucide="image" className="w-4 h-4"></i> Upload Foto dari Galeri
-                    </button>
-                  </div>
-                </div>
-
-                {/* Right Camera Preview Area */}
-                <div className="lg:col-span-2 flex flex-col items-center">
-                  <div className="relative w-full aspect-[4/3] bg-black rounded-3xl overflow-hidden shadow-xl border-4 border-pink-200">
-                    
-                    {/* Real-time Video Element */}
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className={`w-full h-full object-cover ${mirrorCamera && facingMode === 'user' ? '-scale-x-100' : ''}`}
-                    />
-
-                    {/* White Flash Effect */}
-                    {flashEffect && (
-                      <div className="absolute inset-0 bg-white z-30 opacity-90 animate-ping" />
-                    )}
-
-                    {/* Countdown Overlay */}
-                    {countdownTimer !== null && (
-                      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center text-white z-20">
-                        <span className="text-8xl font-black animate-bounce text-pink-300 drop-shadow-lg">
-                          {countdownTimer}
-                        </span>
-                        <span className="text-base font-bold mt-2">Say cheese, cutie! ♡</span>
-                      </div>
-                    )}
-
-                    {/* Camera Error Message */}
-                    {cameraError && (
-                      <div className="absolute inset-0 bg-rose-50 p-6 flex flex-col items-center justify-center text-center text-rose-700">
-                        <i data-lucide="camera-off" className="w-12 h-12 mb-2 text-rose-400"></i>
-                        <p className="text-xs font-bold max-w-xs">{cameraError}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Main Capture Button */}
-                  <div className="mt-6">
-                    <button
-                      disabled={isCapturing}
-                      onClick={startPhotoSession}
-                      className="bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-bold px-10 py-4 rounded-full shadow-xl shadow-rose-200 disabled:opacity-50 transition flex items-center gap-3 text-base"
-                    >
-                      <div className="w-4 h-4 rounded-full bg-white animate-ping" />
-                      {isCapturing ? `Mengambil (${capturedCount}/${getRequiredPhotosCount()})...` : 'AMBIL FOTO NOW 📸'}
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            </main>
-          )}
-
-          {/* ========================================== */}
-          {/* TAB 3: DESIGN EDITOR                       */}
-          {/* ========================================== */}
-          {}
-          {activeTab === 'editor' && (
-            <main className="flex-1 max-w-6xl mx-auto px-4 py-8">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                {/* Editor Tools Side Sidebar */}
-                <div className="bg-white p-6 rounded-3xl border border-pink-200 shadow-xs space-y-6">
-                  <h2 className="font-bold text-slate-800 text-base border-b pb-3 flex items-center gap-2">
-                    <i data-lucide="palette" className="w-5 h-5 text-rose-500"></i> Design Studio Editor
-                  </h2>
-
-                  {/* Preset Theme Selector */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-600 mb-2 block">1. Pilih Preset Tema</label>
-                    <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
-                      {THEMES.map(t => (
-                        <button
-                          key={t.id}
-                          onClick={() => {
-                            setSelectedTheme(t);
-                            setCustomBgColor(t.bg);
-                            setCustomBorderColor(t.border);
-                            setCustomFrameColor(t.frame);
-                          }}
-                          className={`text-left p-2 rounded-xl text-xs font-bold border truncate ${selectedTheme.id === t.id ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-200 text-slate-600'}`}
-                        >
-                          {t.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Custom Color Pickers */}
-                  <div className="space-y-3">
-                    <label className="text-xs font-bold text-slate-600 block">2. Warna & Border Custom</label>
-                    
-                    <div className="flex items-center justify-between text-xs font-medium">
-                      <span>Warna Background:</span>
-                      <input
-                        type="color"
-                        value={customBgColor}
-                        onChange={(e) => setCustomBgColor(e.target.value)}
-                        className="w-8 h-8 rounded-lg cursor-pointer border-0"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs font-medium">
-                      <span>Warna Frame Photo:</span>
-                      <input
-                        type="color"
-                        value={customFrameColor}
-                        onChange={(e) => setCustomFrameColor(e.target.value)}
-                        className="w-8 h-8 rounded-lg cursor-pointer border-0"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs font-medium">
-                      <span>Warna Border Outer:</span>
-                      <input
-                        type="color"
-                        value={customBorderColor}
-                        onChange={(e) => setCustomBorderColor(e.target.value)}
-                        className="w-8 h-8 rounded-lg cursor-pointer border-0"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-[11px] font-bold text-slate-500 mb-1">
-                        <span>Ketebalan Border</span>
-                        <span>{borderWidth}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="30"
-                        value={borderWidth}
-                        onChange={(e) => setBorderWidth(Number(e.target.value))}
-                        className="w-full accent-rose-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Custom Text Overlay */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-600 mb-2 block">3. Tambah Tulisan Custom</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Contoh: Cute Memories ♡"
-                        value={newText}
-                        onChange={(e) => setNewText(e.target.value)}
-                        className="flex-1 text-xs px-3 py-2 border border-pink-200 rounded-xl outline-none font-medium"
-                      />
-                      <button
-                        onClick={handleAddText}
-                        className="bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-bold hover:bg-rose-600 transition"
-                      >
-                        + Teks
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Sticker Library */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-600 mb-2 block">4. Perpustakaan Stiker SVG</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {SVG_STICKERS.map(st => (
-                        <button
-                          key={st.id}
-                          onClick={() => addSvgStickerToCanvas(st.svg)}
-                          className="p-2 border border-pink-100 bg-pink-50/50 rounded-xl hover:bg-pink-100 hover:scale-105 transition flex flex-col items-center"
-                          title={st.label}
-                        >
-                          <div className="w-8 h-8" dangerouslySetInnerHTML={{ __html: st.svg }} />
-                          <span className="text-[10px] font-bold text-slate-600 mt-1">{st.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Custom Image/PNG Sticker Upload */}
-                  <div>
-                    <input
-                      type="file"
-                      accept="image/png, image/jpeg"
-                      ref={customStickerInputRef}
-                      onChange={handleCustomStickerUpload}
-                      className="hidden"
-                    />
-                    <button
-                      onClick={() => customStickerInputRef.current?.click()}
-                      className="w-full py-2 bg-pink-50 hover:bg-pink-100 border border-pink-200 text-rose-600 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
-                    >
-                      <i data-lucide="plus-circle" className="w-4 h-4"></i> Upload Stiker PNG Custom
-                    </button>
-                  </div>
-
-                  {/* Clear Stickers */}
-                  <button
-                    onClick={() => setStickersOnCanvas([])}
-                    className="w-full py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition flex items-center justify-center gap-1"
-                  >
-                    <i data-lucide="trash-2" className="w-3.5 h-3.5"></i> Hapus Semua Stiker
-                  </button>
-
-                </div>
-
-                {/* Canvas Render Preview */}
-                <div className="lg:col-span-2 flex flex-col items-center justify-center bg-white p-6 rounded-3xl border border-pink-200 shadow-xs">
-                  <span className="text-xs text-pink-500 font-bold mb-4 flex items-center gap-1">
-                    <i data-lucide="sparkles" className="w-4 h-4"></i> Live Frame Composite Preview
-                  </span>
-
-                  <div className="p-4 bg-pink-50 rounded-2xl border border-pink-200 shadow-inner max-w-full overflow-auto">
-                    <canvas
-                      ref={compositedCanvasRef}
-                      className="mx-auto shadow-2xl rounded-lg max-w-full"
-                    />
-                  </div>
-
-                  {/* Actions */}
-                  <div className="mt-6 flex flex-wrap gap-4 justify-center">
-                    <button
-                      onClick={() => setActiveTab('studio')}
-                      className="px-6 py-3 border-2 border-rose-300 text-rose-600 rounded-full font-bold text-xs hover:bg-rose-50 transition flex items-center gap-2"
-                    >
-                      <i data-lucide="rotate-ccw" className="w-4 h-4"></i> Retake / Ambil Ulang
-                    </button>
-                    <button
-                      onClick={downloadCompositeImage}
-                      className="px-8 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-full font-bold text-xs shadow-lg shadow-rose-200 hover:scale-105 active:scale-95 transition flex items-center gap-2"
-                    >
-                      <i data-lucide="download" className="w-4 h-4"></i> DOWNLOAD FOTO HIGH-RES 📸
-                    </button>
-                  </div>
-
-                </div>
-
-              </div>
-            </main>
-          )}
-
-          {/* ========================================== */}
-          {/* TAB 4: LITTLE THINGS SHE LOVES (COLLECTION) */}
-          {/* ========================================== */}
-          {}
-          {activeTab === 'collection' && (
-            <main className="flex-1 max-w-5xl mx-auto px-4 py-8">
-              <div className="text-center max-w-xl mx-auto mb-10">
-                <span className="text-xs font-bold text-rose-500 bg-pink-100 px-3 py-1 rounded-full border border-pink-200">
-                  Personal Cute Collection
-                </span>
-                <h2 className="text-3xl font-black text-slate-800 mt-3">Little Things She Loves ♡</h2>
-                <p className="text-slate-500 text-xs mt-1.5 font-medium">
-                  20 daftar barang & hal kesukaan penuh kehangatan. Klik tombol "Stikerkan ✦" untuk menempelkan karakternya langsung ke atas kanvas foto!
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {PERSONAL_ITEMS.map(item => (
-                  <div
-                    key={item.id}
-                    className="bg-white p-4 rounded-2xl border border-pink-200 hover:border-pink-400 hover:shadow-md transition flex flex-col justify-between group"
-                  >
-                    <div>
-                      <div className="text-4xl mb-2 text-center group-hover:scale-110 transition">{item.emoji}</div>
-                      <h3 className="font-bold text-slate-800 text-xs text-center">{item.name}</h3>
-                      <p className="text-[11px] text-rose-500 text-center italic mt-1 font-handwritten">{item.note}</p>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        addEmojiStickerToCanvas(item.emoji, item.name);
-                        setActiveTab('editor');
-                      }}
-                      className="mt-3 w-full py-2 bg-pink-50 hover:bg-pink-100 text-rose-600 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1 border border-pink-200"
-                    >
-                      <i data-lucide="plus" className="w-3 h-3"></i> Stikerkan ✦
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </main>
-          )}
-
-          {/* ========================================== */}
-          {/* TAB 5: PHOTO GALLERY                       */}
-          {/* ========================================== */}
-          {}
-          {activeTab === 'gallery' && (
-            <main className="flex-1 max-w-5xl mx-auto px-4 py-8">
-              <div className="text-center max-w-xl mx-auto mb-8">
-                <h2 className="text-3xl font-black text-slate-800">Galeri Kenangan Tersimpan ✨</h2>
-                <p className="text-slate-500 text-xs mt-1 font-medium">Koleksi foto-foto manis yang telah kamu buat di Pinkie Booth.</p>
-              </div>
-
-              {savedGallery.length === 0 ? (
-                <div className="bg-white p-12 rounded-3xl border border-pink-200 text-center max-w-md mx-auto shadow-xs">
-                  <div className="text-5xl mb-3">🖼️</div>
-                  <h3 className="font-bold text-slate-700 text-sm">Belum Ada Foto Tersimpan</h3>
-                  <p className="text-slate-400 text-xs mt-1 mb-4 font-medium">Ambil foto pertamamu dan simpan ke galeri lokal ini!</p>
-                  <button
-                    onClick={() => setActiveTab('studio')}
-                    className="bg-rose-500 hover:bg-rose-600 text-white font-bold px-6 py-2.5 rounded-full text-xs shadow-md transition"
-                  >
-                    Mulai Foto Now 📸
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                  {savedGallery.map(item => (
-                    <div key={item.id} className="bg-white p-3 rounded-2xl border border-pink-200 shadow-xs flex flex-col items-center">
-                      <img src={item.dataUrl} alt="Memori" className="rounded-xl max-h-80 object-contain mb-2 border border-pink-100" />
-                      <span className="text-[10px] font-bold text-slate-400">{item.date}</span>
-                      <a
-                        href={item.dataUrl}
-                        download={`pinkie-booth-${item.id}.png`}
-                        className="mt-2 text-xs font-bold text-rose-500 hover:underline flex items-center gap-1"
-                      >
-                        <i data-lucide="download" className="w-3 h-3"></i> Unduh Lagi
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </main>
-          )}
-
-          {/* Footer */}
-          {}
-          <footer className="mt-12 border-t border-pink-200 bg-white py-6 text-center text-xs text-pink-400 font-medium">
-            <p>Pinkie Booth — Your Little Cute World ♡ Made with lots of love</p>
-          </footer>
-
+<body class="text-slate-800 pb-12">
+
+  <!-- Header -->
+  <header class="text-center py-8">
+    <div class="inline-block bg-pink-200 text-rose-600 px-4 py-1 rounded-full text-xs font-bold mb-2">🎀 One-Way Pipeline Booth</div>
+    <h1 class="text-4xl font-black text-rose-600">Pinkie Booth</h1>
+    <p class="text-sm text-pink-500 font-medium">Your Little Cute World ♡</p>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4">
+    
+    <!-- Progress Indicator -->
+    <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-pink-200 shadow-sm mb-8 overflow-x-auto gap-4">
+      <div id="nav-1" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-500 text-white whitespace-nowrap">1. Setup Kamera</div>
+      <div id="nav-2" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 whitespace-nowrap">2. Ambil Foto</div>
+      <div id="nav-3" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 whitespace-nowrap">3. Hias & Stiker</div>
+      <div id="nav-4" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 whitespace-nowrap">4. Simpan & Unduh</div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- STEP 1: SETUP KAMERA & FILTER              -->
+    <!-- ========================================== -->
+    <section id="step-1" class="step-container step-active bg-white p-6 rounded-3xl border border-pink-200 shadow-sm">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- Live Preview -->
+        <div class="relative bg-black aspect-[4/3] rounded-2xl overflow-hidden border-4 border-pink-300 shadow-inner flex items-center justify-center">
+          <video id="camera-preview" autoplay playsinline muted class="w-full h-full object-cover -scale-x-100"></video>
+          <div id="camera-error" class="absolute hidden text-rose-500 text-xs text-center p-4 bg-rose-50 rounded-xl">Kamera tidak diizinkan. Silakan refresh atau gunakan upload.</div>
         </div>
-      );
+
+        <!-- Controls -->
+        <div class="space-y-5">
+          <h2 class="text-lg font-bold border-b border-pink-100 pb-2">Pengaturan Sesi Foto</h2>
+          
+          <div>
+            <label class="text-xs font-bold text-slate-500 block mb-2">Pilih Layout:</label>
+            <div class="grid grid-cols-2 gap-2" id="layout-options">
+              <button data-val="1-pic" class="layout-btn py-2 bg-rose-50 border-2 border-rose-400 text-rose-600 rounded-xl text-xs font-bold transition">1 Foto Single</button>
+              <button data-val="2-strip" class="layout-btn py-2 border-2 border-slate-100 text-slate-500 rounded-xl text-xs font-bold transition">2 Foto Strip</button>
+              <button data-val="3-strip" class="layout-btn py-2 border-2 border-slate-100 text-slate-500 rounded-xl text-xs font-bold transition">3 Foto Strip</button>
+              <button data-val="4-strip" class="layout-btn py-2 border-2 border-slate-100 text-slate-500 rounded-xl text-xs font-bold transition">4 Strip (Korea)</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-500 block mb-2">Timer Mundur:</label>
+            <div class="grid grid-cols-4 gap-2" id="timer-options">
+              <button data-val="3" class="timer-btn py-1.5 border-2 border-slate-100 text-slate-500 rounded-xl text-xs font-bold">3s</button>
+              <button data-val="5" class="timer-btn py-1.5 bg-rose-500 border-2 border-rose-500 text-white rounded-xl text-xs font-bold">5s</button>
+              <button data-val="10" class="timer-btn py-1.5 border-2 border-slate-100 text-slate-500 rounded-xl text-xs font-bold">10s</button>
+              <button data-val="15" class="timer-btn py-1.5 border-2 border-slate-100 text-slate-500 rounded-xl text-xs font-bold">15s</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-500 block mb-2">Filter Kamera:</label>
+            <select id="filter-select" class="w-full p-2 text-xs border border-pink-200 rounded-xl bg-pink-50 text-slate-700 outline-none">
+              <option value="none">Normal Clean</option>
+              <option value="sepia(0.3) hue-rotate(310deg) saturate(1.2)">Soft Pink Dreamy 🩷</option>
+              <option value="sepia(0.5) contrast(1.1)">Vintage Warm ☕</option>
+              <option value="grayscale(1) contrast(1.2)">Black & White 🎬</option>
+            </select>
+          </div>
+
+          <button id="btn-start-session" class="w-full py-4 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-2xl shadow-lg shadow-rose-200 mt-4 transition transform active:scale-95">
+            MULAI PENGAMBILAN FOTO 📸
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- STEP 2: TANGKAP FOTO BERTAHAP              -->
+    <!-- ========================================== -->
+    <section id="step-2" class="step-container bg-white p-6 rounded-3xl border border-pink-200 shadow-sm text-center">
+      <h2 class="text-xl font-bold text-slate-800 mb-4">Get Ready, Cutie! ♡</h2>
+      
+      <div class="relative bg-black aspect-[4/3] max-w-lg mx-auto rounded-2xl overflow-hidden border-4 border-pink-400">
+        <video id="capture-video" autoplay playsinline muted class="w-full h-full object-cover -scale-x-100"></video>
+        
+        <!-- Timer Overlay -->
+        <div id="countdown-overlay" class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center hidden z-10">
+          <span id="countdown-number" class="text-9xl font-black text-pink-300 drop-shadow-lg">5</span>
+          <span class="text-white text-sm font-bold mt-4">Say Cheese! ✨</span>
+        </div>
+
+        <div id="flash-effect" class="hidden"></div>
+      </div>
+
+      <div class="mt-6 text-sm font-bold text-rose-500 bg-pink-100 py-2 px-6 rounded-full inline-block">
+        Foto tersimpan: <span id="photo-counter">0</span> / <span id="photo-total">4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- STEP 3: EDITOR FABRIC.JS (DRAG & DROP)     -->
+    <!-- ========================================== -->
+    <section id="step-3" class="step-container bg-white p-6 rounded-3xl border border-pink-200 shadow-sm">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Editor Tools -->
+        <div class="space-y-5 bg-pink-50 p-4 rounded-2xl border border-pink-100 h-[600px] overflow-y-auto">
+          <h2 class="font-bold text-rose-600 text-base border-b border-pink-200 pb-2">Customization Tools</h2>
+
+          <!-- Themes -->
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-2">Preset Tema:</label>
+            <div class="grid grid-cols-2 gap-2" id="theme-buttons"></div>
+          </div>
+
+          <!-- Color Pickers -->
+          <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-600 block">Warna Kustom:</label>
+            <div class="flex justify-between text-xs items-center">
+              <span>Background:</span> <input type="color" id="color-bg" value="#ffe4e6">
+            </div>
+            <div class="flex justify-between text-xs items-center">
+              <span>Frame Slot:</span> <input type="color" id="color-frame" value="#ffffff">
+            </div>
+          </div>
+
+          <!-- Add Text -->
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-2">Teks Custom:</label>
+            <div class="flex gap-2">
+              <input type="text" id="custom-text-input" placeholder="Tulis sesuatu..." class="flex-1 text-xs p-2 rounded-lg border border-pink-200">
+              <button id="btn-add-text" class="bg-rose-500 text-white px-3 rounded-lg text-xs font-bold">Add</button>
+            </div>
+          </div>
+
+          <!-- Little Things She Loves (20 Items) -->
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-2">Little Things She Loves ♡:</label>
+            <p class="text-[10px] text-slate-400 mb-2 leading-tight">Klik untuk menambahkan sebagai stiker draggable ke fotomu!</p>
+            <div class="grid grid-cols-4 gap-1" id="personal-items-grid"></div>
+          </div>
+
+          <!-- Canvas Controls -->
+          <div class="border-t border-pink-200 pt-3">
+            <button id="btn-delete-obj" class="w-full py-2 bg-rose-100 text-rose-700 font-bold text-xs rounded-lg hover:bg-rose-200 mb-2">🗑️ Hapus Stiker Terpilih</button>
+            <button id="btn-finish-edit" class="w-full py-3 bg-rose-500 text-white font-bold text-sm rounded-xl shadow-md hover:bg-rose-600">SELESAI & SIMPAN ✨</button>
+          </div>
+        </div>
+
+        <!-- Fabric Canvas Area -->
+        <div class="lg:col-span-2 flex justify-center bg-gray-50 border border-gray-200 rounded-2xl py-4 overflow-auto relative">
+          <p class="absolute top-2 left-4 text-[10px] text-slate-400">💡 Tip: Klik dan geser stiker, gunakan ujung untuk memutar/memperbesar.</p>
+          <canvas id="editor-canvas"></canvas>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- STEP 4: HASIL FINAL & DOWNLOAD             -->
+    <!-- ========================================== -->
+    <section id="step-4" class="step-container bg-white p-8 rounded-3xl border border-pink-200 shadow-sm text-center">
+      <h2 class="text-2xl font-black text-rose-600 mb-2">Memori Kecilmu Berhasil Dibuat! ♡</h2>
+      <p class="text-xs text-slate-500 mb-6">Pilih format unduhan di bawah ini untuk menyimpan fotomu.</p>
+      
+      <div class="flex justify-center mb-8">
+        <img id="final-preview-img" src="" alt="Final Preview" class="rounded-xl shadow-2xl border-2 border-pink-100 max-h-[500px]">
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-4">
+        <button id="btn-download-png" class="px-6 py-3 bg-rose-500 text-white font-bold text-sm rounded-full shadow-lg shadow-rose-200 hover:scale-105 transition">
+          ⬇️ DOWNLOAD PNG (Gambar)
+        </button>
+        <button id="btn-download-pdf" class="px-6 py-3 bg-indigo-500 text-white font-bold text-sm rounded-full shadow-lg shadow-indigo-200 hover:scale-105 transition">
+          📄 DOWNLOAD PDF (Dokumen)
+        </button>
+      </div>
+      
+      <button id="btn-restart" class="mt-8 text-xs font-bold text-slate-400 hover:text-rose-500 underline">
+        🔄 Buat Sesi Photobooth Baru
+      </button>
+    </section>
+
+  </main>
+
+  <script>
+    /* --- script.js --- */
+
+    // STATE MANAGEMENT
+    const state = {
+      step: 1,
+      stream: null,
+      layout: '1-pic', // 1-pic, 2-strip, 3-strip, 4-strip
+      timer: 5,
+      filter: 'none',
+      photos: [],
+      fabricCanvas: null,
+      themeBg: '#ffe4e6',
+      themeFrame: '#ffffff',
+      themeBorder: '#f43f5e'
+    };
+
+    // DOM ELEMENTS
+    const els = {
+      navs: [document.getElementById('nav-1'), document.getElementById('nav-2'), document.getElementById('nav-3'), document.getElementById('nav-4')],
+      steps: [document.getElementById('step-1'), document.getElementById('step-2'), document.getElementById('step-3'), document.getElementById('step-4')],
+      vid1: document.getElementById('camera-preview'),
+      vid2: document.getElementById('capture-video'),
+      flash: document.getElementById('flash-effect'),
+      overlay: document.getElementById('countdown-overlay'),
+      countdownText: document.getElementById('countdown-number'),
+      counterVal: document.getElementById('photo-counter'),
+      counterTotal: document.getElementById('photo-total'),
+      finalImg: document.getElementById('final-preview-img')
+    };
+
+    // 20 PERSONAL ITEMS (LITTLE THINGS SHE LOVES ♡)
+    const personalItems = [
+      { id: '1', name: 'Gelang Manik', emoji: '📿' }, { id: '2', name: 'Tas Mini', emoji: '👜' },
+      { id: '3', name: 'Flatshoes', emoji: '🥿' }, { id: '4', name: 'Keychain', emoji: '🔑' },
+      { id: '5', name: 'Boneka', emoji: '🧸' }, { id: '6', name: 'Bunga Fresh', emoji: '🌷' },
+      { id: '7', name: 'Parfum', emoji: '🧴' }, { id: '8', name: 'iPhone', emoji: '📱' },
+      { id: '9', name: 'Lambo', emoji: '🏎️' }, { id: '10', name: 'Pashmina', emoji: '🧣' },
+      { id: '11', name: 'Warna Pink', emoji: '🩷' }, { id: '12', name: 'Barang Imut', emoji: '🎀' },
+      { id: '13', name: 'Dimsum', emoji: '🥟' }, { id: '14', name: 'Ngajar', emoji: '👩‍🏫' },
+      { id: '15', name: 'Tulus', emoji: '🎙️' }, { id: '16', name: 'Tidur', emoji: '😴' },
+      { id: '17', name: 'Belajar', emoji: '📚' }, { id: '18', name: 'Buket', emoji: '🌸' },
+      { id: '19', name: 'Novel', emoji: '📖' }, { id: '20', name: 'Ice Cream', emoji: '🍦' }
+    ];
+
+    const themes = [
+      { name: 'Coquette 🎀', bg: '#ffe4e6', frame: '#ffffff', border: '#f43f5e' },
+      { name: 'Strawberry 🍓', bg: '#fff1f2', frame: '#fecdd3', border: '#fb7185' },
+      { name: 'Garden 🌷', bg: '#f0fdf4', frame: '#ffffff', border: '#86efac' },
+      { name: 'Luxury 🍒', bg: '#4c0519', frame: '#881337', border: '#f43f5e' }
+    ];
+
+    // NAVIGATION WIZARD
+    function goToStep(s) {
+      els.steps.forEach((el, i) => {
+        if (i === s - 1) el.classList.add('step-active');
+        else el.classList.remove('step-active');
+      });
+      els.navs.forEach((el, i) => {
+        if (i === s - 1) {
+          el.className = "px-4 py-2 rounded-xl text-xs font-bold bg-rose-500 text-white whitespace-nowrap";
+        } else if (i < s - 1) {
+          el.className = "px-4 py-2 rounded-xl text-xs font-bold bg-pink-100 text-rose-600 whitespace-nowrap";
+        } else {
+          el.className = "px-4 py-2 rounded-xl text-xs font-bold text-slate-400 whitespace-nowrap";
+        }
+      });
+      state.step = s;
+      
+      if(s === 1 || s === 2) startCamera();
+      else stopCamera();
+
+      if(s === 3) initFabricEditor();
+      if(s === 4) generateFinalImage();
     }
 
-    // Render React Application to Root
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<PinkieBoothApp />);
+    // CAMERA API
+    async function startCamera() {
+      try {
+        if(state.stream) return;
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        state.stream = stream;
+        els.vid1.srcObject = stream;
+        els.vid2.srcObject = stream;
+      } catch (err) {
+        document.getElementById('camera-error').classList.remove('hidden');
+      }
+    }
+    function stopCamera() {
+      if(state.stream) {
+        state.stream.getTracks().forEach(t => t.stop());
+        state.stream = null;
+      }
+    }
+
+    // EVENT LISTENERS STEP 1
+    document.querySelectorAll('.layout-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.layout-btn').forEach(b => b.className = "layout-btn py-2 border-2 border-slate-100 text-slate-500 rounded-xl text-xs font-bold transition");
+        e.target.className = "layout-btn py-2 bg-rose-50 border-2 border-rose-400 text-rose-600 rounded-xl text-xs font-bold transition";
+        state.layout = e.target.dataset.val;
+      });
+    });
+    document.querySelectorAll('.timer-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.timer-btn').forEach(b => b.className = "timer-btn py-1.5 border-2 border-slate-100 text-slate-500 rounded-xl text-xs font-bold");
+        e.target.className = "timer-btn py-1.5 bg-rose-500 border-2 border-rose-500 text-white rounded-xl text-xs font-bold";
+        state.timer = parseInt(e.target.dataset.val);
+      });
+    });
+    document.getElementById('filter-select').addEventListener('change', (e) => {
+      state.filter = e.target.value;
+      els.vid1.style.filter = state.filter === 'none' ? '' : state.filter;
+      els.vid2.style.filter = state.filter === 'none' ? '' : state.filter;
+    });
+    document.getElementById('btn-start-session').addEventListener('click', () => {
+      state.photos = [];
+      const total = state.layout === '1-pic' ? 1 : state.layout === '2-strip' ? 2 : state.layout === '3-strip' ? 3 : 4;
+      els.counterTotal.innerText = total;
+      goToStep(2);
+      startCaptureProcess(total);
+    });
+
+    // AUDIO SYNTH SHUTTER (No external files needed)
+    function playShutter() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = 'square'; osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.15);
+      } catch(e) {}
+    }
+
+    // CAPTURE LOGIC
+    function startCaptureProcess(totalRequired) {
+      els.counterVal.innerText = state.photos.length;
+      if (state.photos.length >= totalRequired) {
+        setTimeout(() => goToStep(3), 1000);
+        return;
+      }
+      
+      let t = state.timer;
+      els.countdownText.innerText = t;
+      els.overlay.classList.remove('hidden');
+
+      const iv = setInterval(() => {
+        t--;
+        els.countdownText.innerText = t;
+        if (t <= 0) {
+          clearInterval(iv);
+          els.overlay.classList.add('hidden');
+          
+          // Flash & Sound
+          playShutter();
+          els.flash.classList.remove('hidden');
+          els.flash.classList.add('flash-overlay');
+          setTimeout(() => els.flash.classList.remove('flash-overlay', 'hidden'), 300);
+
+          // Draw to temporary canvas to save snapshot
+          const canvas = document.createElement('canvas');
+          canvas.width = els.vid2.videoWidth || 640;
+          canvas.height = els.vid2.videoHeight || 480;
+          const ctx = canvas.getContext('2d');
+          
+          ctx.translate(canvas.width, 0); ctx.scale(-1, 1); // Mirror
+          if(state.filter !== 'none') ctx.filter = state.filter;
+          ctx.drawImage(els.vid2, 0, 0, canvas.width, canvas.height);
+          
+          state.photos.push(canvas.toDataURL('image/png'));
+          els.counterVal.innerText = state.photos.length;
+          
+          setTimeout(() => startCaptureProcess(totalRequired), 1500); // Pause before next countdown
+        }
+      }, 1000);
+    }
+
+    // POPULATE THEMES & ITEMS
+    const themeGrid = document.getElementById('theme-buttons');
+    themes.forEach(th => {
+      const b = document.createElement('button');
+      b.className = "py-2 border border-pink-200 bg-white text-xs font-bold rounded-lg hover:bg-rose-50";
+      b.innerText = th.name;
+      b.onclick = () => {
+        document.getElementById('color-bg').value = th.bg;
+        document.getElementById('color-frame').value = th.frame;
+        state.themeBorder = th.border;
+        renderBaseCanvasBackground();
+      };
+      themeGrid.appendChild(b);
+    });
+
+    const itemsGrid = document.getElementById('personal-items-grid');
+    personalItems.forEach(item => {
+      const b = document.createElement('button');
+      b.className = "p-1 bg-white border border-pink-100 rounded-md text-xl hover:scale-110 transition shadow-sm";
+      b.title = item.name;
+      b.innerText = item.emoji;
+      b.onclick = () => addEmojiToFabric(item.emoji);
+      itemsGrid.appendChild(b);
+    });
+
+    // FABRIC JS EDITOR INITIALIZATION
+    function initFabricEditor() {
+      if(!state.fabricCanvas) {
+        state.fabricCanvas = new fabric.Canvas('editor-canvas', { preserveObjectStacking: true });
+      }
+      renderBaseCanvasBackground();
+
+      // Add Initial Title
+      if(state.fabricCanvas.getObjects().length === 0) {
+        const text = new fabric.Text("Pinkie Booth ♡", {
+          left: 200, top: 40, fontFamily: 'Sacramento', fontSize: 32, fill: '#e11d48',
+          originX: 'center', originY: 'center', selectable: true
+        });
+        state.fabricCanvas.add(text);
+      }
+    }
+
+    // DRAW BASE LAYOUT AS FABRIC BACKGROUND
+    function renderBaseCanvasBackground() {
+      const cWidth = 400;
+      let cHeight = 600;
+      const count = state.layout === '1-pic' ? 1 : state.layout === '2-strip' ? 2 : state.layout === '3-strip' ? 3 : 4;
+      if(state.layout === '4-strip') cHeight = 900;
+      if(state.layout === '3-strip') cHeight = 750;
+
+      state.fabricCanvas.setWidth(cWidth);
+      state.fabricCanvas.setHeight(cHeight);
+
+      const tempC = document.createElement('canvas');
+      tempC.width = cWidth; tempC.height = cHeight;
+      const ctx = tempC.getContext('2d');
+
+      // Colors
+      const bgCol = document.getElementById('color-bg').value;
+      const frCol = document.getElementById('color-frame').value;
+      const bdCol = state.themeBorder;
+
+      // Draw Bg & Border
+      ctx.fillStyle = bgCol; ctx.fillRect(0, 0, cWidth, cHeight);
+      ctx.strokeStyle = bdCol; ctx.lineWidth = 10;
+      ctx.strokeRect(5, 5, cWidth-10, cHeight-10);
+
+      // Draw Photo Slots
+      const pad = 20;
+      const availW = cWidth - (pad * 2);
+      const headerSpace = 80;
+      const footerSpace = 40;
+      const availH = cHeight - headerSpace - footerSpace;
+      const slotGap = 15;
+      const slotH = (availH - (slotGap * (count - 1))) / count;
+
+      for(let i=0; i<count; i++) {
+        const slotY = headerSpace + i * (slotH + slotGap);
+        ctx.fillStyle = frCol;
+        ctx.fillRect(pad, slotY, availW, slotH);
+
+        if(state.photos[i]) {
+          const img = new Image();
+          img.src = state.photos[i];
+          // Scale to cover
+          const ratio = img.width / img.height;
+          const slotRatio = availW / slotH;
+          let rW = availW, rH = slotH, rX = pad, rY = slotY;
+          if(ratio > slotRatio) { rW = slotH * ratio; rX = pad - (rW - availW)/2; } 
+          else { rH = availW / ratio; rY = slotY - (rH - slotH)/2; }
+          
+          ctx.save();
+          ctx.beginPath(); ctx.rect(pad, slotY, availW, slotH); ctx.clip();
+          ctx.drawImage(img, rX, rY, rW, rH);
+          ctx.restore();
+        }
+      }
+
+      // Set to Fabric Background
+      fabric.Image.fromURL(tempC.toDataURL('image/png'), (img) => {
+        state.fabricCanvas.setBackgroundImage(img, state.fabricCanvas.renderAll.bind(state.fabricCanvas));
+      });
+    }
+
+    // FABRIC EVENT LISTENERS
+    document.getElementById('color-bg').addEventListener('change', renderBaseCanvasBackground);
+    document.getElementById('color-frame').addEventListener('change', renderBaseCanvasBackground);
+
+    document.getElementById('btn-add-text').addEventListener('click', () => {
+      const val = document.getElementById('custom-text-input').value;
+      if(!val) return;
+      const text = new fabric.Text(val, {
+        left: 200, top: 200, fontFamily: 'Plus Jakarta Sans', fontSize: 24, fill: '#333',
+        fontWeight: 'bold', originX: 'center', originY: 'center', selectable: true
+      });
+      state.fabricCanvas.add(text);
+      state.fabricCanvas.setActiveObject(text);
+      document.getElementById('custom-text-input').value = '';
+    });
+
+    function addEmojiToFabric(emoji) {
+      const text = new fabric.Text(emoji, {
+        left: 200 + (Math.random()*40-20), top: 300 + (Math.random()*40-20), 
+        fontSize: 50, originX: 'center', originY: 'center', selectable: true
+      });
+      state.fabricCanvas.add(text);
+      state.fabricCanvas.setActiveObject(text);
+    }
+
+    document.getElementById('btn-delete-obj').addEventListener('click', () => {
+      const activeObj = state.fabricCanvas.getActiveObjects();
+      if (activeObj.length) {
+        state.fabricCanvas.discardActiveObject();
+        activeObj.forEach(obj => state.fabricCanvas.remove(obj));
+      }
+    });
+
+    document.getElementById('btn-finish-edit').addEventListener('click', () => {
+      state.fabricCanvas.discardActiveObject(); // deselect before capture
+      state.fabricCanvas.renderAll();
+      goToStep(4);
+    });
+
+    // FINAL STEP EXPORT
+    function generateFinalImage() {
+      const dataURL = state.fabricCanvas.toDataURL({ format: 'png', quality: 1 });
+      els.finalImg.src = dataURL;
+    }
+
+    document.getElementById('btn-download-png').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = `Pinkie-Booth-${Date.now()}.png`;
+      link.href = els.finalImg.src;
+      link.click();
+    });
+
+    document.getElementById('btn-download-pdf').addEventListener('click', () => {
+      const { jsPDF } = window.jspdf;
+      const w = state.fabricCanvas.width;
+      const h = state.fabricCanvas.height;
+      // Convert px to point for jsPDF
+      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [w, h] });
+      pdf.addImage(els.finalImg.src, 'PNG', 0, 0, w, h);
+      pdf.save(`Pinkie-Booth-${Date.now()}.pdf`);
+    });
+
+    document.getElementById('btn-restart').addEventListener('click', () => {
+      state.fabricCanvas.clear();
+      goToStep(1);
+    });
+
+    // START
+    goToStep(1);
   </script>
 </body>
 </html>
